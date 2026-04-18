@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './modules/auth/auth.routes'
 import estudiantesRoutes from './modules/estudiantes/estudiantes.routes'
+import actividadesRoutes from './modules/actividades/actividades.routes'
 
 dotenv.config()
 
@@ -14,6 +15,7 @@ app.use(express.json())
 
 app.use('/api/auth', authRoutes)
 app.use('/api/estudiantes', estudiantesRoutes)
+app.use('/api/actividades', actividadesRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Movilidad UCC funcionando correctamente' })
