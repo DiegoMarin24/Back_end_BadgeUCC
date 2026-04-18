@@ -1,0 +1,184 @@
+// schema.prisma
+// Plataforma de Movilidad e Internacionalización — UCC
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// PROGRAMAS ACADÉMICOS
+// ─────────────────────────────────────────────
+model ProgramaAcademico {
+  id              String       @id @default(uuid())
+  nombre          String       @unique
+  aplicaInsignias Boolean      @default(true)
+  estudiantes     Estudiante[]
+
+  @@map("programas_academicos")
+}
+
+// ─────────────────────────────────────────────
+// ESTUDIANTES
+// ─────────────────────────────────────────────
+model Estudiante {
+  id                  String   @id @default(uuid())
+  programaAcademicoId String
+  nivelAcademico      String
+  idEstudiante        String   @unique
+  tipoDocumento       String
+  nroDocumento        String   @unique
+  lugarExpedicion     String
+  primerApellido      String
+  segundoApellido     String?
+  primerNombre        String
+  segundoNombre       String?
+  genero              String
+  nroTelefonico       String?
+  correoInstitucional String   @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relaciones
+  programa              ProgramaAcademico         @relation(fields: [programaAcademicoId], references: [id])
+  insigniasObtenidas    EstudianteInsignia[]
+  cumplimientoRequisitos CumplimientoRequisito[]
+  actividadesRealizadas  ActividadEstudiante[]
+
+  @@map("estudiantes")
+}
+
+// ─────────────────────────────────────────────
+// INSIGNIAS
+// ─────────────────────────────────────────────
+model Insignia {
+  id          String  @id @default(uuid())
+  nombre      String  @unique
+  descripcion String?
+  nivel       Int     // 1=Pasajero Internacional, 2=Estudiante Global, 3=Ciudadano Mundial
+  imagenUrl   String?
+
+  // Relaciones
+  requisitos         RequisitoInsignia[]
+  estudiantesInsignia EstudianteInsignia[]
+
+  @@map("insignias")
+}
+
+// Tabla pivot: estudiante ↔ insignia
+model EstudianteInsignia {
+  id           String   @id @default(uuid())
+  estudianteId String
+  insigniaId   String
+  fechaEmision DateTime @default(now())
+  otorgadaPor  String   // nombre del coordinador
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  insignia   Insignia   @relation(fields: [insigniaId], references: [id])
+
+  @@unique([estudianteId, insigniaId])
+  @@map("estudiante_insignias")
+}
+
+// ─────────────────────────────────────────────
+// REQUISITOS POR INSIGNIA
+// ─────────────────────────────────────────────
+model RequisitoInsignia {
+  id            String          @id @default(uuid())
+  insigniaId    String
+  tipo          TipoRequisito
+  descripcion   String
+  esObligatorio Boolean         @default(true)
+
+  insignia       Insignia                @relation(fields: [insigniaId], references: [id])
+  cumplimientos  CumplimientoRequisito[]
+
+  @@map("requisitos_insignia")
+}
+
+enum TipoRequisito {
+  SEMESTRES_APROBADOS   // ej: mínimo 2 semestres
+  CURSO_APROBADO        // ej: Inglés 1, Humanidades 1-2-3
+  CREDITOS_PORCENTAJE   // ej: 60% de créditos aprobados
+  PUNTOS_ACTIVIDADES    // ej: 70 puntos de la ruta global
+  INSIGNIA_PREVIA       // ej: debe ser Estudiante Global primero
+}
+
+// ─────────────────────────────────────────────
+// CUMPLIMIENTO DE REQUISITOS (marcado manual)
+// ─────────────────────────────────────────────
+model CumplimientoRequisito {
+  id              String    @id @default(uuid())
+  estudianteId    String
+  requisitoId     String
+  aprobado        Boolean   @default(false)
+  fechaAprobacion DateTime?
+  aprobadoPor     String?   // nombre del coordinador que lo marcó
+  observaciones   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  estudiante Estudiante        @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  requisito  RequisitoInsignia @relation(fields: [requisitoId], references: [id])
+
+  @@unique([estudianteId, requisitoId])
+  @@map("cumplimiento_requisitos")
+}
+
+// ─────────────────────────────────────────────
+// CATÁLOGO DE ACTIVIDADES (Ruta Global)
+// ─────────────────────────────────────────────
+model CatalogoActividad {
+  id          String  @id @default(uuid())
+  nombre      String  @unique
+  puntos      Int
+  descripcion String?
+  acumulable  Boolean @default(false) // puede sumarse más de una vez
+
+  actividadesEstudiante ActividadEstudiante[]
+
+  @@map("catalogo_actividades")
+}
+
+// ─────────────────────────────────────────────
+// ACTIVIDADES REALIZADAS POR ESTUDIANTE
+// ─────────────────────────────────────────────
+model ActividadEstudiante {
+  id              String   @id @default(uuid())
+  estudianteId    String
+  actividadId     String
+  fechaRegistro   DateTime @default(now())
+  registradoPor   String   // coordinador
+  urlCertificado  String?  // opcional — archivo de soporte
+  puntosObtenidos Int
+  observaciones   String?
+
+  estudiante Estudiante        @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  actividad  CatalogoActividad @relation(fields: [actividadId], references: [id])
+
+  @@map("actividades_estudiante")
+}
+
+// ─────────────────────────────────────────────
+// USUARIOS (coordinadores/administradores)
+// ─────────────────────────────────────────────
+model Usuario {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String   @unique
+  password  String   // hash bcrypt
+  rol       RolUsuario @default(COORDINADOR)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+enum RolUsuario {
+  ADMIN
+  COORDINADOR
+}
