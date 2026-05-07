@@ -18,6 +18,7 @@ export const asignarInsignia = async (data: {
   estudianteId: string
   insigniaId: string
   otorgadaPor: string
+  urlDocumento?: string
 }) => {
   return prisma.estudianteInsignia.create({
     data,

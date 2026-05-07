@@ -76,6 +76,7 @@ model EstudianteInsignia {
   insigniaId   String
   fechaEmision DateTime @default(now())
   otorgadaPor  String   // nombre del coordinador
+  urlDocumento String?
 
   estudiante Estudiante @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
   insignia   Insignia   @relation(fields: [insigniaId], references: [id])
