@@ -1,10 +1,13 @@
 import { prisma } from '../../lib/prisma'
 
+// Funciones para manejar estudiantes
 export const obtenerEstudiantes = async () => {
   return prisma.estudiante.findMany({
     include: {
       programa: true,
+      // Incluir insignias obtenidas y actividades realizadas para cada estudiante
       insigniasObtenidas: { include: { insignia: true } },
+      actividadesRealizadas: { include: { actividad: true } },
     },
     orderBy: { primerApellido: 'asc' },
   })
